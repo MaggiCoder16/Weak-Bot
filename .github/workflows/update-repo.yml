@@ -26,7 +26,7 @@ jobs:
       - name: Add NNUE remote
         run: |
           git remote add nnue https://github.com/MaggiCoder16/NNUE_Final.git || echo "NNUE repo already added"
-          git fetch botli main
+          git fetch nnue main
 
       - name: Merge changes into our repo
         run: |
