@@ -25,13 +25,14 @@ jobs:
 
       - name: Add NNUE remote
         run: |
-          git remote add nnue https://github.com/MaggiCoder16/NNUE_Final.git || echo "NNUE repo already added"
+          git remote remove nnue || true
+          git remote add nnue https://github.com/MaggiCoder16/NNUE_Final.git
           git fetch nnue main
 
       - name: Merge changes into our repo
         run: |
-          git merge botli/main --allow-unrelated-histories -X ours --no-edit || true
-          git merge botli/main -X ours --no-edit || true
+          git merge nnue/main --allow-unrelated-histories -X ours --no-edit || true
+          git merge nnue/main -X ours --no-edit || true
           git checkout --ours .
           git add -A
           git commit -m "Sync NNUE updates (ours wins on conflicts)" || echo "No changes to commit"
