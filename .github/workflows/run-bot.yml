@@ -60,6 +60,6 @@ jobs:
 
       - name: 🔁 Self-Restart (Fire-and-Forget)
         if: always()
-        run: gh workflow run run-bot.yml
+        run: gh workflow run "Run Bot"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
