@@ -137,6 +137,16 @@ opening_books:
       names:
         - crazy
 
+    horde_white:
+      selection: best_move
+      names:
+        - horde
+
+    horde_black:
+      selection: best_move
+      names:
+        - horde
+
 #   'antichess', 'atomic', 'chess960', 'crazyhouse', 'horde', 'kingofthehill', 'racingkings' and '3check' as well.
 #   Append '_white', '_black' or '_human' to use the engine only as the specific color or against humans.
 
@@ -275,3 +285,4 @@ books:                                    # Names of the opening books (to be us
   Goodbook: "./engines/book.bin"
   Anti: "./engines/anti_book.bin"
   crazy: "./engines/crazyhouse_book.bin"
+  horde: "./engines/horde_book.bin"

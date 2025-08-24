@@ -1,4 +1,4 @@
-name: Build Crazyhouse Book
+name: Build Book
 
 on:
   workflow_dispatch:
@@ -17,7 +17,7 @@ jobs:
       - run: python filter_and_build.py
       - uses: actions/upload-artifact@v4
         with:
-          name: crazyhouse-book
+          name: book
           path: |
-            crazyhouse_games.pgn
-            crazyhouse_book.bin
+            horde_games.pgn
+            horde_book.bin
