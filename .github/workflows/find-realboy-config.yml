@@ -1,4 +1,4 @@
-name: Find Real Config from Friend’s Repo
+name: Find correct Config from realboy’s Repo
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Clone friend’s repo
+      - name: Clone realboy’s repo
         run: git clone --depth 1 https://github.com/zonalraid45/Mypant.git
 
       - name: Find the real config (4219–8000)
