@@ -1,17 +1,17 @@
-name: Find correct Config from realboy’s Repo
+name: Find best config
 
 on:
   workflow_dispatch:
 
 jobs:
-  find-unique-config:
+  find-best:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Clone realboy’s repo
+      - name: clone realboy’s repo
         run: git clone --depth 1 https://github.com/zonalraid45/Mypant.git
 
-      - name: Find the real config (4219–8000)
+      - name: find the best config (4219–8000)
         run: |
           cd Mypant/Config
           sha256sum config{4219..8000}.yml | sort | uniq -u -w64 | awk '{print $2}'
