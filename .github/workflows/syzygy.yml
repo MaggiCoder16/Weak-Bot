@@ -1,0 +1,45 @@
+name: Add Syzygy Engines via Git LFS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  add-syzygy-lfs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout this repository
+        uses: actions/checkout@v4
+
+      - name: Install git and Git LFS
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git git-lfs
+          git lfs install
+
+      - name: Clone source repository
+        run: |
+          git clone --depth 1 github.com/zonalraid45/Mypant.git temp_repo
+
+      - name: Copy syzygy folder into existing engines
+        run: |
+          mkdir -p engines
+          cp -r temp_repo/engines/syzygy engines/
+
+      - name: Track syzygy folder with Git LFS
+        run: |
+          git lfs track "engines/syzygy/**"
+          git add .gitattributes
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit and push changes
+        run: |
+          git add engines/syzygy
+          git commit -m "Add syzygy folder from Mypant via Git LFS" || echo "No changes to commit"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
