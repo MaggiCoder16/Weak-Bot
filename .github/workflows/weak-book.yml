@@ -19,5 +19,5 @@ jobs:
         with:
           name: book
           path: |
-            standard_games.pgn
-            standard_book.bin
+            MinOpponentMoves_wins.pgn
+            MinOpponentMoves_wins_book.bin
