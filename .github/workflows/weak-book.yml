@@ -1,4 +1,4 @@
-name: Build Book
+name: Build weak Book
 
 on:
   workflow_dispatch:
@@ -19,5 +19,5 @@ jobs:
         with:
           name: book
           path: |
-            atomic_games.pgn
-            atomic_book.bin
+            standard_games.pgn
+            standard_book.bin
