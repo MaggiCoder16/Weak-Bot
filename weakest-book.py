@@ -7,16 +7,17 @@ import chess
 import chess.pgn
 import chess.polyglot
 
+# Bots to fetch games from
 BOTS = ["MinOpponentMoves", "NewChessEngine-ai"]
 
-VARIANT = "standard"      # changed to standard chess
-MAX_ELO = 1600            # max rating filter
+VARIANT = "standard"
+MAX_ELO = 1600          # Maximum rating filter
 CHUNK_SIZE = 5000
 REQUEST_TIMEOUT = 120
 SLEEP_BETWEEN_CHUNKS = 0.4
 MAX_PLY = 60
 MAX_BOOK_WEIGHT = 2520
-MAX_GAMES = 10000   # safety cap
+MAX_GAMES = 10000       # Safety cap
 
 PGN_OUTPUT = f"{VARIANT}_games.pgn"
 BOOK_OUTPUT = f"{VARIANT}_book.bin"
@@ -87,7 +88,7 @@ def fetch_all_games_for_bot(bot: str) -> list[str]:
             except Exception:
                 continue
 
-            # max rating filter
+            # Only keep games where both players <= MAX_ELO
             if max(white_rating, black_rating) > MAX_ELO:
                 continue
 
@@ -127,19 +128,15 @@ def save_merged_pgn(pgn_list: list[str], out_path: str) -> None:
     print(f"Saved merged PGN to {out_path} ({len(pgn_list)} games)")
 
 
-def key_hex(board: chess.Board) -> str:
-    return f"{chess.polyglot.zobrist_hash(board):016x}"
-
-
 class BookMove:
     def __init__(self):
         self.weight = 0
-        self.move = None
+        self.move: chess.Move | None = None
 
 
 class BookPosition:
     def __init__(self):
-        self.moves = {}
+        self.moves: dict[str, BookMove] = {}
 
     def get_move(self, uci: str) -> BookMove:
         return self.moves.setdefault(uci, BookMove())
@@ -147,7 +144,7 @@ class BookPosition:
 
 class Book:
     def __init__(self):
-        self.positions = {}
+        self.positions: dict[str, BookPosition] = {}
 
     def get_position(self, key_hex: str) -> BookPosition:
         return self.positions.setdefault(key_hex, BookPosition())
@@ -182,8 +179,12 @@ class Book:
         print(f"Saved {len(entries)} moves to book: {path}")
 
 
+def key_hex(board: chess.Board) -> str:
+    return f"{chess.polyglot.zobrist_hash(board):016x}"
+
+
 def build_book_from_pgn(pgn_path: str, bin_path: str):
-    print("Building book...")
+    print("Building weakest book...")
     book = Book()
     with open(pgn_path, "r", encoding="utf-8") as f:
         data = f.read()
@@ -200,15 +201,13 @@ def build_book_from_pgn(pgn_path: str, bin_path: str):
         if VARIANT not in variant_tag:
             continue
 
-        kept += 1
-
         board = chess.Board()
         result = game.headers.get("Result", "*")
+        kept += 1
 
         for ply, move in enumerate(game.mainline_moves()):
             if ply >= MAX_PLY:
                 break
-
             try:
                 k = key_hex(board)
                 pos = book.get_position(k)
@@ -217,12 +216,13 @@ def build_book_from_pgn(pgn_path: str, bin_path: str):
 
                 decay = max(1, (MAX_PLY - ply) // 5)
 
-                if result == "1-0":
-                    bm.weight += (6 if board.turn == chess.WHITE else 1) * decay
-                elif result == "0-1":
-                    bm.weight += (6 if board.turn == chess.BLACK else 1) * decay
+                # Only add weight if bot loses
+                if result == "1-0" and board.turn == chess.BLACK:
+                    bm.weight += 6 * decay
+                elif result == "0-1" and board.turn == chess.WHITE:
+                    bm.weight += 6 * decay
                 elif result == "1/2-1/2":
-                    bm.weight += 2 * decay
+                    bm.weight += 1 * decay  # optional: tiny weight for draws
 
                 board.push(move)
             except Exception:
@@ -242,12 +242,12 @@ def build_book_from_pgn(pgn_path: str, bin_path: str):
 
 
 def main():
-    all_pgns = []
+    all_pgns: list[str] = []
     for bot in BOTS:
         all_pgns.extend(fetch_all_games_for_bot(bot))
     save_merged_pgn(all_pgns, PGN_OUTPUT)
     build_book_from_pgn(PGN_OUTPUT, BOOK_OUTPUT)
-    print("Done.")
+    print("Done. Weakest book created.")
 
 
 if __name__ == "__main__":
