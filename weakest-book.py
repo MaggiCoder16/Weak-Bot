@@ -7,24 +7,23 @@ import chess
 import chess.pgn
 import chess.polyglot
 
-# Bots to fetch games from
-BOTS = ["MinOpponentMoves", "NewChessEngine-ai"]
+# Only this bot, no rating filter
+BOTS = ["MinOpponentMoves"]
 
 VARIANT = "standard"
-MAX_ELO = 1600          # Maximum rating filter
 CHUNK_SIZE = 5000
 REQUEST_TIMEOUT = 120
 SLEEP_BETWEEN_CHUNKS = 0.4
 MAX_PLY = 60
 MAX_BOOK_WEIGHT = 2520
-MAX_GAMES = 10000       # Safety cap
+MAX_GAMES = 10000  # safety cap
 
 PGN_OUTPUT = f"{VARIANT}_games.pgn"
 BOOK_OUTPUT = f"{VARIANT}_book.bin"
 
 
 def fetch_all_games_for_bot(bot: str) -> list[str]:
-    print(f"Fetching {VARIANT} games for {bot} (rating <= {MAX_ELO})...")
+    print(f"Fetching {VARIANT} games for {bot} (all games, no rating filter)...")
     base_url = f"https://lichess.org/api/games/user/{bot}"
     headers = {"Accept": "application/x-ndjson"}
     params = {
@@ -80,18 +79,6 @@ def fetch_all_games_for_bot(bot: str) -> list[str]:
                 if earliest_ts is None or created_at < earliest_ts:
                     earliest_ts = created_at
 
-            try:
-                w = game["players"]["white"]
-                b = game["players"]["black"]
-                white_rating = int(w.get("rating", 0) or 0)
-                black_rating = int(b.get("rating", 0) or 0)
-            except Exception:
-                continue
-
-            # Only keep games where both players <= MAX_ELO
-            if max(white_rating, black_rating) > MAX_ELO:
-                continue
-
             variant = (game.get("variant") or "").lower().replace(" ", "")
             if VARIANT not in variant:
                 continue
@@ -113,7 +100,7 @@ def fetch_all_games_for_bot(bot: str) -> list[str]:
         until_ts = earliest_ts - 1
         time.sleep(SLEEP_BETWEEN_CHUNKS)
 
-    print(f"Finished {bot}: processed {total_lines} lines, kept {kept} games ≤ {MAX_ELO}")
+    print(f"Finished {bot}: processed {total_lines} lines, kept {kept} games")
     return all_pgns
 
 
@@ -184,7 +171,7 @@ def key_hex(board: chess.Board) -> str:
 
 
 def build_book_from_pgn(pgn_path: str, bin_path: str):
-    print("Building weakest book...")
+    print("Building book of wins only...")
     book = Book()
     with open(pgn_path, "r", encoding="utf-8") as f:
         data = f.read()
@@ -216,13 +203,10 @@ def build_book_from_pgn(pgn_path: str, bin_path: str):
 
                 decay = max(1, (MAX_PLY - ply) // 5)
 
-                # Only add weight if bot loses
-                if result == "1-0" and board.turn == chess.BLACK:
-                    bm.weight += 6 * decay
-                elif result == "0-1" and board.turn == chess.WHITE:
-                    bm.weight += 6 * decay
-                elif result == "1/2-1/2":
-                    bm.weight += 1 * decay  # optional: tiny weight for draws
+                # Only add weight if MinOpponentMoves wins
+                if (result == "1-0" and board.turn == chess.WHITE) or \
+                   (result == "0-1" and board.turn == chess.BLACK):
+                    bm.weight += random.randint(4, 6) * decay
 
                 board.push(move)
             except Exception:
@@ -234,6 +218,7 @@ def build_book_from_pgn(pgn_path: str, bin_path: str):
 
     print(f"Parsed {processed} PGNs, kept {kept} games")
     book.normalize()
+    # Add tiny randomization for variety
     for pos in book.positions.values():
         for bm in pos.moves.values():
             bm.weight = min(MAX_BOOK_WEIGHT, bm.weight + random.randint(0, 3))
@@ -247,7 +232,7 @@ def main():
         all_pgns.extend(fetch_all_games_for_bot(bot))
     save_merged_pgn(all_pgns, PGN_OUTPUT)
     build_book_from_pgn(PGN_OUTPUT, BOOK_OUTPUT)
-    print("Done. Weakest book created.")
+    print("Done. Book of wins for MinOpponentMoves created.")
 
 
 if __name__ == "__main__":
