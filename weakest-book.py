@@ -1,116 +1,16 @@
-import requests
-import json
-import time
 import io
 import random
 import chess
 import chess.pgn
 import chess.polyglot
 
-BOTS = ["MinOpponentMoves"]
+PGN_INPUT = "MinOpponentMoves_wins.pgn"
+BOOK_OUTPUT = "MinOpponentMoves_wins_book.bin"
 
-VARIANT = "standard"
-CHUNK_SIZE = 5000
-REQUEST_TIMEOUT = 120
-SLEEP_BETWEEN_CHUNKS = 0.4
 MAX_PLY = 60
 MAX_BOOK_WEIGHT = 2520
-MAX_GAMES = 10000
 
-PGN_OUTPUT = f"{VARIANT}_games.pgn"
-BOOK_OUTPUT = f"{VARIANT}_book.bin"
-
-
-def fetch_all_games_for_bot(bot: str) -> list[str]:
-    print(f"Fetching {VARIANT} games for {bot} (all games, no rating filter)...")
-    base_url = f"https://lichess.org/api/games/user/{bot}"
-    headers = {"Accept": "application/x-ndjson"}
-    params = {
-        "max": CHUNK_SIZE,
-        "perfType": VARIANT,
-        "rated": "true",
-        "moves": "true",
-        "pgnInJson": "true",
-        "clocks": "false",
-        "evals": "false",
-        "opening": "false",
-    }
-
-    all_pgns = []
-    until_ts = None
-    total_lines = 0
-    kept = 0
-    seen_ids = set()
-
-    while True:
-        if until_ts is not None:
-            params["until"] = until_ts
-        else:
-            params.pop("until", None)
-
-        resp = requests.get(
-            base_url, params=params, headers=headers, stream=True, timeout=REQUEST_TIMEOUT
-        )
-        resp.raise_for_status()
-
-        batch_count = 0
-        earliest_ts = None
-
-        for raw in resp.iter_lines():
-            if not raw:
-                continue
-            batch_count += 1
-            total_lines += 1
-
-            try:
-                game = json.loads(raw.decode("utf-8"))
-            except json.JSONDecodeError:
-                continue
-
-            gid = str(game.get("id") or "")
-            if gid in seen_ids:
-                continue
-            seen_ids.add(gid)
-
-            created_at = game.get("createdAt")
-            if isinstance(created_at, int):
-                if earliest_ts is None or created_at < earliest_ts:
-                    earliest_ts = created_at
-
-            variant_tag = (game.get("variant") or "").lower().replace(" ", "")
-            if VARIANT not in variant_tag:
-                continue
-
-            pgn = game.get("pgn")
-            if pgn:
-                all_pgns.append(pgn)
-                kept += 1
-
-            if len(all_pgns) >= MAX_GAMES:
-                print(f"Reached max cap of {MAX_GAMES} games for {bot}")
-                break
-
-        print(f"  chunk: got {batch_count} games, kept {kept} total so far")
-
-        if batch_count == 0 or earliest_ts is None or len(all_pgns) >= MAX_GAMES:
-            break
-
-        until_ts = earliest_ts - 1
-        time.sleep(SLEEP_BETWEEN_CHUNKS)
-
-    print(f"Finished {bot}: processed {total_lines} lines, kept {kept} games")
-    return all_pgns
-
-
-def save_merged_pgn(pgn_list: list[str], out_path: str) -> None:
-    print("Merging PGNs...")
-    with open(out_path, "w", encoding="utf-8") as f:
-        for p in pgn_list:
-            f.write(p)
-            if not p.endswith("\n"):
-                f.write("\n")
-            f.write("\n")
-    print(f"Saved merged PGN to {out_path} ({len(pgn_list)} games)")
+VARIANT = "standard"
 
 
 class BookMove:
@@ -169,7 +69,7 @@ def key_hex(board: chess.Board) -> str:
 
 
 def build_book_from_pgn(pgn_path: str, bin_path: str):
-    print("Building book of wins only...")
+    print("Building book from local PGN...")
     book = Book()
     with open(pgn_path, "r", encoding="utf-8") as f:
         data = f.read()
@@ -177,13 +77,14 @@ def build_book_from_pgn(pgn_path: str, bin_path: str):
 
     processed = 0
     kept = 0
+
     while True:
         game = chess.pgn.read_game(stream)
         if game is None:
             break
 
         variant_tag = (game.headers.get("Variant", "") or "").lower().replace(" ", "")
-        if VARIANT not in variant_tag:
+        if VARIANT not in variant_tag and VARIANT != "standard":
             continue
 
         board = chess.Board()
@@ -201,7 +102,7 @@ def build_book_from_pgn(pgn_path: str, bin_path: str):
 
                 decay = max(1, (MAX_PLY - ply) // 5)
 
-                # Only count winning moves of MinOpponentMoves
+                # Only count moves that led to MinOpponentMoves win
                 if (result == "1-0" and board.turn == chess.WHITE) or \
                    (result == "0-1" and board.turn == chess.BLACK):
                     bm.weight += random.randint(4, 6) * decay
@@ -216,20 +117,18 @@ def build_book_from_pgn(pgn_path: str, bin_path: str):
 
     print(f"Parsed {processed} PGNs, kept {kept} games")
     book.normalize()
+
+    # Add tiny random variation for even weaker book
     for pos in book.positions.values():
         for bm in pos.moves.values():
             bm.weight = min(MAX_BOOK_WEIGHT, bm.weight + random.randint(0, 3))
 
     book.save_polyglot(bin_path)
+    print("Done. Weakest book created.")
 
 
 def main():
-    all_pgns: list[str] = []
-    for bot in BOTS:
-        all_pgns.extend(fetch_all_games_for_bot(bot))
-    save_merged_pgn(all_pgns, PGN_OUTPUT)
-    build_book_from_pgn(PGN_OUTPUT, BOOK_OUTPUT)
-    print("Done. Book of wins for MinOpponentMoves created.")
+    build_book_from_pgn(PGN_INPUT, BOOK_OUTPUT)
 
 
 if __name__ == "__main__":
