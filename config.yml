@@ -10,9 +10,9 @@ engines:
     silence_stderr: false                 # Suppresses stderr output.
     move_overhead_multiplier: 2.5         # Increase if your bot flags games too often. Default move overhead is 1 second per 1 minute initital time.
     uci_options:                          # Arbitrary UCI options passed to the engine.
-      Threads: 7                          # Max CPU threads the engine can use.
-      Hash: 4096                           # Max memory (in megabytes) the engine can allocate.
-      Move Overhead: 250                  # Increase if your bot flags games too often.
+      Threads: 1                          # Max CPU threads the engine can use.
+      Hash: 256                           # Max memory (in megabytes) the engine can allocate.
+      Move Overhead: 150                  # Increase if your bot flags games too often.
     limits:                               # Limits that end the move calculation early.
       time: 5.0                           # Max time per move in seconds.
 #      depth: 26                           # Max depth per move.
@@ -24,8 +24,8 @@ engines:
     silence_stderr: false                 # Suppresses stderr output.
     move_overhead_multiplier: 1.0         # Increase if your bot flags games too often. Default move overhead is 1 second per 1 minute initital time.
     uci_options:                          # Arbitrary UCI options passed to the engine.
-      Threads: 8                          # Max CPU threads the engine can use.
-      Hash: 10000                           # Max memory (in megabytes) the engine can allocate.
+      Threads: 1                          # Max CPU threads the engine can use.
+      Hash: 256                           # Max memory (in megabytes) the engine can allocate.
       Move Overhead: 150                  # Increase if your bot flags games too often.
       EvalFile: "3check-cb5f517c228b.nnue:antichess-dd3cbe53cd4e.nnue:atomic-2cf13ff256cc.nnue:crazyhouse-8ebf84784ad2.nnue:horde-28173ddccabe.nnue:kingofthehill-978b86d0e6a4.nnue:racingkings-636b95f085e3.nnue"
     limits:                               # Limits that end the move calculation early.
@@ -41,9 +41,9 @@ engines:
     silence_stderr: false                 # Suppresses stderr output.
     move_overhead_multiplier: 1.0         # Increase if your bot flags games too often. Default move overhead is 1 second per 1 minute initital time.
     uci_options:                          # Arbitrary UCI options passed to the engine.
-      Threads: 7                          # Max CPU threads the engine can use.
-      Hash: 4096                           # Max memory (in megabytes) the engine can allocate.
-      Move Overhead: 250                  # Increase if your bot flags games too often.
+      Threads: 1                          # Max CPU threads the engine can use.
+      Hash: 256                           # Max memory (in megabytes) the engine can allocate.
+      Move Overhead: 150                  # Increase if your bot flags games too often.
     limits:                               # Limits that end the move calculation early.
       time: 5.0                           # Max time per move in seconds.
  
@@ -57,7 +57,7 @@ engines:
 
 syzygy:
   standard:
-    enabled: true                        # Activate local syzygy endgame tablebases.
+    enabled: false                        # Activate local syzygy endgame tablebases.
     paths:                                # Paths to local syzygy endgame tablebases.
       - "./engines/syzygy"
     max_pieces: 7                         # Count of max pieces in the local syzygy endgame tablebases.
@@ -82,7 +82,7 @@ gaviota:
   max_pieces: 5                           # Count of max pieces in the local gaviota endgame tablebases.
 
 opening_books:
-  enabled: true 
+  enabled: false 
   priority: 400
   books:
     standard_white:
@@ -193,7 +193,7 @@ online_moves:
 #   max_depth: 16                         # Half move max depth. (Comment this line for max depth)
 #   max_moves: 1                          # Max number of moves played from Lichess cloud eval. (Comment this line for max moves)
   chessdb:
-    enabled: true                        # Activate online moves from https://chessdb.cn/queryc_en/
+    enabled: false                        # Activate online moves from https://chessdb.cn/queryc_en/
     priority: 100                         # Priority with which this move source is used. Higher priority is used first.
     only_without_book: true              # Whether the chessdb should only be used if there is no matching book.
     min_candidates: 1                     # Minimum number of candidate moves.
@@ -203,7 +203,7 @@ online_moves:
 #   max_depth: 16                         # Half move max depth. (Comment this line for max depth)
 #   max_moves: 1                          # Max number of moves played from chessdb. (Comment this line for max moves)
   online_egtb:
-    enabled: true                        # Activate online endgame tablebases from Lichess.
+    enabled: false                        # Activate online endgame tablebases from Lichess.
     min_time: 5                           # Time the bot must have at least to use the online move. +10 seconds in games without increment.
     timeout: 1                            # Time the server has to respond.
 
@@ -212,10 +212,10 @@ offer_draw:
   score: 10                               # If the absolute value of the score is less than or equal to this value, the bot offers/accepts draw (in cp)
   consecutive_moves: 5                    # How many moves in a row the absolute value of the score has to be below the draw value
   min_game_length: 25                     # Earliest move in which draw is offered.
-  against_humans: false                    # Activate whether these settings should apply against humans.
+  against_humans: true                    # Activate whether these settings should apply against humans.
 
 resign:
-  enabled: true                          # Activate whether the bot should resign games.
+  enabled: false                          # Activate whether the bot should resign games.
   score: -1000                            # If the score is less than or equal to this value, the bot resigns (in cp).
   consecutive_moves: 5                    # How many moves in a row the score has to be below the resign value.
   against_humans: false                    # Activate whether these settings should apply against humans.
