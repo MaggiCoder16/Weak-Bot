@@ -7,7 +7,6 @@ import chess
 import chess.pgn
 import chess.polyglot
 
-# Only this bot, no rating filter
 BOTS = ["MinOpponentMoves"]
 
 VARIANT = "standard"
@@ -16,7 +15,7 @@ REQUEST_TIMEOUT = 120
 SLEEP_BETWEEN_CHUNKS = 0.4
 MAX_PLY = 60
 MAX_BOOK_WEIGHT = 2520
-MAX_GAMES = 10000  # safety cap
+MAX_GAMES = 10000
 
 PGN_OUTPUT = f"{VARIANT}_games.pgn"
 BOOK_OUTPUT = f"{VARIANT}_book.bin"
@@ -71,16 +70,15 @@ def fetch_all_games_for_bot(bot: str) -> list[str]:
             gid = str(game.get("id") or "")
             if gid in seen_ids:
                 continue
-            if gid:
-                seen_ids.add(gid)
+            seen_ids.add(gid)
 
             created_at = game.get("createdAt")
             if isinstance(created_at, int):
                 if earliest_ts is None or created_at < earliest_ts:
                     earliest_ts = created_at
 
-            variant = (game.get("variant") or "").lower().replace(" ", "")
-            if VARIANT not in variant:
+            variant_tag = (game.get("variant") or "").lower().replace(" ", "")
+            if VARIANT not in variant_tag:
                 continue
 
             pgn = game.get("pgn")
@@ -203,7 +201,7 @@ def build_book_from_pgn(pgn_path: str, bin_path: str):
 
                 decay = max(1, (MAX_PLY - ply) // 5)
 
-                # Only add weight if MinOpponentMoves wins
+                # Only count winning moves of MinOpponentMoves
                 if (result == "1-0" and board.turn == chess.WHITE) or \
                    (result == "0-1" and board.turn == chess.BLACK):
                     bm.weight += random.randint(4, 6) * decay
@@ -218,7 +216,6 @@ def build_book_from_pgn(pgn_path: str, bin_path: str):
 
     print(f"Parsed {processed} PGNs, kept {kept} games")
     book.normalize()
-    # Add tiny randomization for variety
     for pos in book.positions.values():
         for bm in pos.moves.values():
             bm.weight = min(MAX_BOOK_WEIGHT, bm.weight + random.randint(0, 3))
