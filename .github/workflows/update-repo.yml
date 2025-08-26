@@ -26,7 +26,7 @@ jobs:
       - name: Add NNUE remote
         run: |
           git remote remove nnue || true
-          git remote add nnue https://github.com/MaggiCoder16/NNUE_Final.git
+          git remote add nnue https://${{ secrets.PAT_TOKEN }}@github.com/MaggiCoder16/NNUE_Final.git
           git fetch nnue main
 
       - name: Merge changes into our repo
