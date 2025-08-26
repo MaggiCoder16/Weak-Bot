@@ -110,12 +110,12 @@ opening_books:
     chess960_white:
       selection: best_move
       names:
-        - Goodbook    
+        - Chess960    
 
     chess960_black:
       selection: best_move
       names:
-        - Goodbook
+        - Chess960
 
     antichess_white:
       selection: best_move
@@ -300,7 +300,7 @@ books:                                    # Names of the opening books (to be us
   BlackBook: "./engines/black.bin"
   Optimus2502: "./engines/OPTIMUS2502.bin"
   Optimus4: "./engines/OPTIMUS4.bin"
-  Goodbook: "./engines/book.bin"
+  Chess960: "./engines/chess960.bin"
   Anti: "./engines/anti_book.bin"
   crazy: "./engines/crazyhouse_book.bin"
   horde: "./engines/horde_book.bin"
