@@ -1,45 +1,36 @@
-name: Add Syzygy Engines via Git LFS
+name: Download Syzygy from Sesse.net
 
 on:
   workflow_dispatch:
 
 jobs:
-  add-syzygy-lfs:
+  fetch-syzygy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout this repository
+      - name: Checkout repo (no LFS)
         uses: actions/checkout@v4
+        with:
+          lfs: false
 
-      - name: Install git and Git LFS
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y git git-lfs
-          git lfs install
+      - name: Disable Git LFS filters
+        run: git lfs uninstall
 
-      - name: Clone source repository
-        run: |
-          git clone --depth 1 github.com/zonalraid45/Mypant.git temp_repo
+      - name: Create engines/syzygy directory
+        run: mkdir -p engines/syzygy
 
-      - name: Copy syzygy folder into existing engines
+      - name: Download full 3-4-5 Syzygy set
         run: |
-          mkdir -p engines
-          cp -r temp_repo/engines/syzygy engines/
+          cd engines/syzygy
+          wget -c -r --no-parent --no-directories -e robots=off \
+            http://tablebase.sesse.net/syzygy/3-4-5/
 
-      - name: Track syzygy folder with Git LFS
-        run: |
-          git lfs track "engines/syzygy/**"
-          git add .gitattributes
+      - name: Show some downloaded files
+        run: ls -lh engines/syzygy | head -20
 
-      - name: Configure Git
+      - name: Commit and push binaries
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Commit and push changes
-        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
           git add engines/syzygy
-          git commit -m "Add syzygy folder from Mypant via Git LFS" || echo "No changes to commit"
+          git commit -m "Add full 3-4-5 Syzygy tablebases (binary)" || echo "No changes to commit"
           git push
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
