@@ -38,7 +38,7 @@ jobs:
 
       - name: Download latest Stockfish dev 
         run: |
-          chmod +x engines/stockfish
+          chmod +x engines/stockfish.exe
           chmod +x ./engines/fairy-stockfish_x86-64-bmi2
 
       - name: Run Bot
