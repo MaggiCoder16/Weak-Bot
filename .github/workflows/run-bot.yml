@@ -38,13 +38,13 @@ jobs:
 
       - name: Download latest Stockfish dev 
         run: |
-          chmod +x engines/stockfish.exe
+          chmod +x engines/stockfish
           chmod +x ./engines/fairy-stockfish_x86-64-bmi2
 
       - name: Run Bot
         run: |
           echo "Starting bot..."
-          python3 -u user_interface.py --upgrade &
+          python3 -u user_interface.py "matchmaking" &
           PID=$!
           
           # Auto-exit after 350 minutes (so restart runs without overlap)
