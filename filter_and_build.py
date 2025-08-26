@@ -6,12 +6,11 @@ import random
 import chess
 import chess.pgn
 import chess.polyglot
-import chess.variant
 
-BOTS = ["NimsiluBot", "VariantsBot"]
+BOTS = ["MinOpponentMoves", "NewChessEngine-ai"]
 
-VARIANT = "atomic"
-MIN_ELO = 2550
+VARIANT = "standard"      # changed to standard chess
+MAX_ELO = 1600            # max rating filter
 CHUNK_SIZE = 5000
 REQUEST_TIMEOUT = 120
 SLEEP_BETWEEN_CHUNKS = 0.4
@@ -24,7 +23,7 @@ BOOK_OUTPUT = f"{VARIANT}_book.bin"
 
 
 def fetch_all_games_for_bot(bot: str) -> list[str]:
-    print(f"Fetching {VARIANT} games for {bot} (rating >= {MIN_ELO})...")
+    print(f"Fetching {VARIANT} games for {bot} (rating <= {MAX_ELO})...")
     base_url = f"https://lichess.org/api/games/user/{bot}"
     headers = {"Accept": "application/x-ndjson"}
     params = {
@@ -38,11 +37,11 @@ def fetch_all_games_for_bot(bot: str) -> list[str]:
         "opening": "false",
     }
 
-    all_pgns: list[str] = []
-    until_ts: int | None = None
+    all_pgns = []
+    until_ts = None
     total_lines = 0
     kept = 0
-    seen_ids: set[str] = set()
+    seen_ids = set()
 
     while True:
         if until_ts is not None:
@@ -88,7 +87,8 @@ def fetch_all_games_for_bot(bot: str) -> list[str]:
             except Exception:
                 continue
 
-            if max(white_rating, black_rating) < MIN_ELO:
+            # max rating filter
+            if max(white_rating, black_rating) > MAX_ELO:
                 continue
 
             variant = (game.get("variant") or "").lower().replace(" ", "")
@@ -112,7 +112,7 @@ def fetch_all_games_for_bot(bot: str) -> list[str]:
         until_ts = earliest_ts - 1
         time.sleep(SLEEP_BETWEEN_CHUNKS)
 
-    print(f"Finished {bot}: processed {total_lines} lines, kept {kept} games ≥ {MIN_ELO}")
+    print(f"Finished {bot}: processed {total_lines} lines, kept {kept} games ≤ {MAX_ELO}")
     return all_pgns
 
 
@@ -127,15 +127,19 @@ def save_merged_pgn(pgn_list: list[str], out_path: str) -> None:
     print(f"Saved merged PGN to {out_path} ({len(pgn_list)} games)")
 
 
+def key_hex(board: chess.Board) -> str:
+    return f"{chess.polyglot.zobrist_hash(board):016x}"
+
+
 class BookMove:
     def __init__(self):
         self.weight = 0
-        self.move: chess.Move | None = None
+        self.move = None
 
 
 class BookPosition:
     def __init__(self):
-        self.moves: dict[str, BookMove] = {}
+        self.moves = {}
 
     def get_move(self, uci: str) -> BookMove:
         return self.moves.setdefault(uci, BookMove())
@@ -143,7 +147,7 @@ class BookPosition:
 
 class Book:
     def __init__(self):
-        self.positions: dict[str, BookPosition] = {}
+        self.positions = {}
 
     def get_position(self, key_hex: str) -> BookPosition:
         return self.positions.setdefault(key_hex, BookPosition())
@@ -154,7 +158,6 @@ class Book:
             if s <= 0:
                 continue
             for bm in pos.moves.values():
-                # scale to MAX_BOOK_WEIGHT, keep minimum 1
                 bm.weight = max(1, int(bm.weight / s * MAX_BOOK_WEIGHT))
 
     def save_polyglot(self, path: str):
@@ -165,8 +168,6 @@ class Book:
                 if bm.weight <= 0 or bm.move is None:
                     continue
                 m = bm.move
-                if "@" in m.uci():
-                    continue
                 mi = m.to_square + (m.from_square << 6)
                 if m.promotion:
                     mi += ((m.promotion - 1) << 12)
@@ -179,10 +180,6 @@ class Book:
             for e in entries:
                 f.write(e)
         print(f"Saved {len(entries)} moves to book: {path}")
-
-
-def key_hex(board: chess.Board) -> str:
-    return f"{chess.polyglot.zobrist_hash(board):016x}"
 
 
 def build_book_from_pgn(pgn_path: str, bin_path: str):
@@ -205,14 +202,7 @@ def build_book_from_pgn(pgn_path: str, bin_path: str):
 
         kept += 1
 
-        try:
-            last_node = game.end()
-            if last_node.board().fullmove_number < 10:
-                continue
-        except Exception:
-            pass
-
-        board = chess.variant.AtomicBoard()
+        board = chess.Board()
         result = game.headers.get("Result", "*")
 
         for ply, move in enumerate(game.mainline_moves()):
@@ -242,7 +232,7 @@ def build_book_from_pgn(pgn_path: str, bin_path: str):
         if processed % 100 == 0:
             print(f"Processed {processed} games")
 
-    print(f"Parsed {processed} PGNs, kept {kept} KOTH games")
+    print(f"Parsed {processed} PGNs, kept {kept} games")
     book.normalize()
     for pos in book.positions.values():
         for bm in pos.moves.values():
@@ -252,7 +242,7 @@ def build_book_from_pgn(pgn_path: str, bin_path: str):
 
 
 def main():
-    all_pgns: list[str] = []
+    all_pgns = []
     for bot in BOTS:
         all_pgns.extend(fetch_all_games_for_bot(bot))
     save_merged_pgn(all_pgns, PGN_OUTPUT)
@@ -262,4 +252,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
