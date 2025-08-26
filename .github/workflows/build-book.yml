@@ -19,5 +19,5 @@ jobs:
         with:
           name: book
           path: |
-            horde_games.pgn
-            horde_book.bin
+            atomic_games.pgn
+            atomic_book.bin
